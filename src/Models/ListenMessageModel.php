@@ -46,7 +46,7 @@ class ListenMessageModel extends Model
     {
         parent::__construct($attributes);
 
-        $this->connection = config('rabbitmq-messages.connection');
+        $this->connection = config('rabbitmq-messages.database_connection');
     }
 
     public function setAsQueued(Carbon $queuedAt = null): void

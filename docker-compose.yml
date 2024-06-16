@@ -5,36 +5,23 @@ services:
     volumes:
       - '.:/app'
     depends_on:
-      - mysql
+      - rabbitmq
 
-  mysql:
-    image: 'mysql:8.0'
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
     ports:
-      - '${FORWARD_DB_PORT:-3306}:3306'
+      - '${RABBITMQ_PORT:-5672}:5672'
+      - '${RABBITMQ_MANAGEMENT_PORT:-15672}:15672'
     environment:
-      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-      MYSQL_ROOT_HOST: "%"
-      MYSQL_DATABASE: '${DB_DATABASE}'
-      MYSQL_USER: '${DB_USERNAME}'
-      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
     volumes:
-      - 'mysql-volume:/var/lib/mysql'
-    healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}" ]
-      retries: 3
-      timeout: 5s
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    depends_on:
-      - mysql
-    restart: always
-    ports:
-      - '${FORWARD_PHPMYADMIN_PORT:-8080}:80'
-    environment:
-      PMA_HOST: mysql
-      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      - rabbitmq-data-volume:/var/lib/rabbitmq
+      - rabbitmq-log-volume:/var/log/rabbitmq
 
 volumes:
-  mysql-volume:
+  rabbitmq-data-volume:
+    driver: local
+  rabbitmq-log-volume:
     driver: local

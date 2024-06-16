@@ -83,15 +83,15 @@ return [
                 [
                     'host' => env('RABBITMQ_HOST', '127.0.0.1'),
                     'port' => env('RABBITMQ_PORT', 5672),
-                    'user' => env('RABBITMQ_USER', 'guest'),
+                    'user' => env('RABBITMQ_USERNAME', 'guest'),
                     'password' => env('RABBITMQ_PASSWORD', 'guest'),
                     'vhost' => env('RABBITMQ_VHOST', '/'),
                 ],
             ],
             'options' => [
                 'queue' => [
-                    'exchange' => env('RABBITMQ_EXCHANGE', ''),
-                    'exchange_type' => env('RABBITMQ_EXCHANGE_TYPE', ''),
+                    'exchange' => env('RABBITMQ_EXCHANGE', 'amq.fanout'),
+                    'exchange_type' => env('RABBITMQ_EXCHANGE_TYPE', 'fanout'),
                     'exchange_routing_key' => config('RABBITMQ_ROUTING_KEY', ''),
                     'job' => RabbitMQJob::class,
 //                    'reroute_failed' => true,

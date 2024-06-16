@@ -158,7 +158,6 @@ class DispatchMessage
     protected function buildPayload(): void
     {
         $payload = [
-            'app_id' => $this->getAppID(),
             'uuid' => $this->uuid->toString(),
             'fired_at' => null,
         ];
