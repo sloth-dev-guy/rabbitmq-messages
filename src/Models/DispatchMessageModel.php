@@ -48,23 +48,7 @@ class DispatchMessageModel extends Model
     {
         parent::__construct($attributes);
 
-        $this->connection = config('rabbitmq-messages.connection');
-    }
-
-    /**
-     * @deprecated
-     * @param array $options
-     * @return array
-     */
-    public function publishProperties(array $options = []): array
-    {
-        $attempts = Arr::get($options, 'attempts') ?: 0;
-
-        $destination = Arr::get($options, 'destination', $this->metadata->get('routing_key'));
-        $exchange = Arr::get($options, 'exchange', $this->metadata->get('exchange'));
-        $exchangeType = Arr::get($options, 'exchange_type', $this->metadata->get('exchange_type'));
-
-        return [$destination, $exchange, $exchangeType, $attempts];
+        $this->connection = config('rabbitmq-messages.database_connection');
     }
 
     /**

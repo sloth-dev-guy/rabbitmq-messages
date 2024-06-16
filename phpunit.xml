@@ -14,9 +14,16 @@
     </testsuites>
     <source>
         <include>
-            <directory>app</directory>
+            <directory suffix=".php">./src</directory>
         </include>
+        <exclude>
+            <directory suffix=".php">./bootstrap</directory>
+            <directory suffix=".php">./config</directory>
+            <directory suffix=".php">./database</directory>
+        </exclude>
     </source>
+    <coverage>
+    </coverage>
     <php>
         <env name="APP_ENV" value="testing" />
         <env name="APP_MAINTENANCE_DRIVER" value="file" />

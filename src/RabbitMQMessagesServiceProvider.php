@@ -4,6 +4,10 @@ namespace SlothDevGuy\RabbitMQMessages;
 
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\ServiceProvider;
+use SlothDevGuy\RabbitMQMessages\Interfaces\MessageDispatcherInterface;
+use SlothDevGuy\RabbitMQMessages\Services\FacadeService;
+use SlothDevGuy\RabbitMQMessages\Services\MessageDispatcher;
+
 //use SlothDevGuy\RabbitMQMessages\Interface\MessagePublisherInterface;
 //use SlothDevGuy\RabbitMQMessages\Interface\MessageResilientInterface;
 //use SlothDevGuy\RabbitMQMessages\Services\HelperClass;
@@ -17,22 +21,38 @@ use Illuminate\Support\ServiceProvider;
 class RabbitMQMessagesServiceProvider extends ServiceProvider
 {
     /**
+     * Registers the necessary bindings and instances in the Laravel application container.
+     *
+     * @return void
      * @throws BindingResolutionException
      */
     public function register(): void
     {
-//        $this->app->bind(MessagePublisherInterface::class, MessagePublisher::class);
+        $this->app->bind(MessageDispatcherInterface::class, MessageDispatcher::class);
 //        $this->app->bind(MessageResilientInterface::class, MessageResilienceService::class);
-//
-//        $helper = $this->app->make(HelperClass::class);
-//        $this->app->instance(RabbitMQMessage::ACCESSOR, $helper);
+
+        $helper = $this->app->make(FacadeService::class);
+        $this->app->instance(RabbitMQMessage::ACCESSOR, $helper);
     }
 
+    /**
+     * Configure the publishing of resources.
+     *
+     * This method is called during the booting of the application.
+     * It is responsible for setting up the publishing of resources, such as configuration files.
+     *
+     * @return void
+     */
     public function boot(): void
     {
         $this->configurePublishing();
     }
 
+    /**
+     * Configure the publishing of RabbitMQ Messages migrations.
+     *
+     * @return void
+     */
     protected function configurePublishing(): void
     {
         if(!$this->app->runningInConsole()) {
