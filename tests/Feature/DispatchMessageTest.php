@@ -4,6 +4,7 @@ namespace Feature;
 
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Config;
+use PhpAmqpLib\Exception\AMQPConnectionClosedException;
 use PhpAmqpLib\Exception\AMQPIOException;
 use SlothDevGuy\RabbitMQMessages\Models\Enums\DispatchMessageStatusEnum;
 use SlothDevGuy\RabbitMQMessages\RabbitMQMessage;
@@ -26,31 +27,63 @@ class DispatchMessageTest extends TestCase
         $this->assertEquals(DispatchMessageStatusEnum::DISPATCHED, $message->fresh()->status);
     }
 
-    public function testMessageDispatchFailed(): void
+    public function testMessageDispatchFailedInvalidHost(): void
     {
         $this->expectException(AMQPIOException::class);
-        $this->setInvalidConnection();
+        $this->setInvalidConnection([
+            'host' => 'invalid-host',
+        ]);
         $this->app->register(RabbitMQMessagesServiceProvider::class);
         $payload = collect(['foo-key' => 'foo-value']);
-        RabbitMQMessage::dispatchMessage('foo-event', $payload, 'invalid');
+
+        try{
+            RabbitMQMessage::dispatchMessage('foo-event', $payload, 'invalid');
+        } finally {
+            $this->assertFailedDispatch();
+        }
     }
 
-    protected function setInvalidConnection(): void
+    public function testMessageDispatchFailedInvalidUsernameAndPassword(): void
+    {
+        $this->expectException(AMQPConnectionClosedException::class);
+        $this->setInvalidConnection([
+            'host' => 'rabbitmq',
+            'user' => 'invalid-username',
+            'password' => 'invalid-password',
+        ]);
+        $this->app->register(RabbitMQMessagesServiceProvider::class);
+        $payload = collect(['foo-key' => 'foo-value']);
+        try{
+            RabbitMQMessage::dispatchMessage('foo-event', $payload, 'invalid');
+        } finally {
+            $this->assertFailedDispatch();
+        }
+    }
+
+    protected function setInvalidConnection(array $host): void
     {
         Config::set('queue.connections.invalid', [
             'driver' => 'rabbitmq',
             'after_commit' => true,
             'hosts' => [
-                [
-                    'host' => 'localhost',
+                array_merge([
+                    'host' => 'rabbitmq',
                     'port' => 5672,
-                    'user' => 'foo',
-                    'password' => 'bar',
+                    'user' => 'username',
+                    'password' => 'password',
                     'vhost' => '/',
-                ],
+                ], $host),
             ],
             'app_id' => 'invalid-app',
             'worker' => RabbitMQQueue::class,
+        ]);
+    }
+
+    protected function assertFailedDispatch(): void
+    {
+        $this->assertDatabaseCount('dispatch_message', 1);
+        $this->assertDatabaseHas('dispatch_message', [
+            'status' => DispatchMessageStatusEnum::FAILED,
         ]);
     }
 }
