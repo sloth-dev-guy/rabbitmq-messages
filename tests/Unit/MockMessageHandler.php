@@ -59,6 +59,8 @@ class MockMessageHandler implements MessageHandlerInterface
                 'find' => false,
             ];
 
+            public static ListenMessageModel|null $findReturn = null;
+
             /**
              * @return void
              * @noinspection PhpMissingReturnTypeInspection
@@ -88,7 +90,7 @@ class MockMessageHandler implements MessageHandlerInterface
                 if(static::$fails['find'])
                     throw new QueryException('test-connection', 'select now()', [], new Exception());
 
-                return null;
+                return static::$findReturn;
             }
         };
     }
