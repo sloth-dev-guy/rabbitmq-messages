@@ -172,7 +172,7 @@ class MessageListener
 
         $reason = class_basename($ex);
         logger()->info(
-            "message registration failed $reason: {$ex->getMessage()}",
+            "message listener failed $reason: {$ex->getMessage()}",
             $listenedMessage->properties->toArray()
         );
 

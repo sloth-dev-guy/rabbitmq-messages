@@ -5,14 +5,10 @@ namespace SlothDevGuy\RabbitMQMessages;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\ServiceProvider;
 use SlothDevGuy\RabbitMQMessages\Interfaces\MessageDispatcherInterface;
+use SlothDevGuy\RabbitMQMessages\Interfaces\MessageResilientInterface;
 use SlothDevGuy\RabbitMQMessages\Services\FacadeService;
 use SlothDevGuy\RabbitMQMessages\Services\MessageDispatcher;
-
-//use SlothDevGuy\RabbitMQMessages\Interface\MessagePublisherInterface;
-//use SlothDevGuy\RabbitMQMessages\Interface\MessageResilientInterface;
-//use SlothDevGuy\RabbitMQMessages\Services\HelperClass;
-//use SlothDevGuy\RabbitMQMessages\Services\MessagePublisher;
-//use SlothDevGuy\RabbitMQMessages\Services\MessageResilienceService;
+use SlothDevGuy\RabbitMQMessages\Services\MessageResilient;
 
 /**
  * Class RabbitMQMessagesServiceProvider
@@ -29,7 +25,7 @@ class RabbitMQMessagesServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(MessageDispatcherInterface::class, MessageDispatcher::class);
-//        $this->app->bind(MessageResilientInterface::class, MessageResilienceService::class);
+        $this->app->bind(MessageResilientInterface::class, MessageResilient::class);
 
         $helper = $this->app->make(FacadeService::class);
         $this->app->instance(RabbitMQMessage::ACCESSOR, $helper);

@@ -1,6 +1,7 @@
 <?php
 
 use PhpAmqpLib\Exchange\AMQPExchangeType;
+use SlothDevGuy\RabbitMQMessages\RabbitMQJob;
 use SlothDevGuy\RabbitMQMessages\RabbitMQQueue;
 
 return [

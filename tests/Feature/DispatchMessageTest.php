@@ -1,6 +1,6 @@
 <?php
 
-namespace Feature;
+namespace SlothDevGuy\RabbitMQMessagesTests\Feature;
 
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Config;
