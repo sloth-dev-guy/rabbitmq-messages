@@ -11,6 +11,7 @@ use SlothDevGuy\RabbitMQMessages\Exceptions\MessageAlreadyRegisterException;
 use SlothDevGuy\RabbitMQMessages\Exceptions\MessageRetriesExhaustedException;
 use SlothDevGuy\RabbitMQMessages\Interfaces\SkipListenMessageThrowable;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
+use SlothDevGuy\RabbitMQMessages\Pipes\Casts\CastAMQPMessageProperties;
 use SlothDevGuy\RabbitMQMessages\RabbitMQJob;
 use SlothDevGuy\RabbitMQMessages\RabbitMQMessage;
 use Throwable;
@@ -111,7 +112,7 @@ class MessageListener
             /** @var ListenMessageModel $listenedMessage */
             $listenedMessage = new $this->listenMessageModel;
 
-            $listenedMessage->properties = collect($message->get_properties());
+            $listenedMessage->properties = CastAMQPMessageProperties::fromAMQPMessage($message);
             $listenedMessage->payload = collect(json_decode($message->getBody(), true));
             $listenedMessage->metadata = collect([
                 'connection' => $connection,
@@ -165,19 +166,17 @@ class MessageListener
         Throwable $ex
     ): void
     {
-        if($listenedMessage->id){
-            $listenedMessage->setAsFailed();
-            $listenedMessage->save();
-        }
-
         $reason = class_basename($ex);
         logger()->info(
             "message listener failed $reason: {$ex->getMessage()}",
             $listenedMessage->properties->toArray()
         );
 
+        $listenedMessage->setAsFailed($ex);
+        $listenedMessage->save();
+
         if (RabbitMQMessage::canRetryMessages($connection)) {
-            $listenedMessage->id && $listenedMessage->delete();
+            $listenedMessage->delete();
             RabbitMQMessage::retryMessage($listenedMessage, $ex);
         }
 

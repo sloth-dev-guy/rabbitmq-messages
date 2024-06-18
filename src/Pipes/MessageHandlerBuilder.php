@@ -34,7 +34,7 @@ class MessageHandlerBuilder
      */
     public function build(ListenMessageModel $message): MessageHandlerInterface
     {
-        $handler = config("queue.message_handlers.$message->name");
+        $handler = config("rabbitmq-messages.message_handlers.$message->name");
 
         if(is_null($handler)){
             throw new MessageWithoutHandlerException("No handler for message: $message->name");

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Queue;
 use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 use SlothDevGuy\RabbitMQMessages\Interfaces\MessageResilientInterface;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
+use SlothDevGuy\RabbitMQMessages\Pipes\MessageExhausted;
 use SlothDevGuy\RabbitMQMessages\RabbitMQQueue;
 use Throwable;
 
@@ -38,7 +39,7 @@ class MessageResilient implements MessageResilientInterface
      */
     public function retry(ListenMessageModel $message, Throwable $reason, string $connection = null): ListenMessageModel
     {
-        $connection = $connection ?? $message->getConnection();
+        $connection = $connection ?? $message->metadata->get('connection');
         if(!$this->canRetry($connection)){
             return $message;
         }
@@ -47,10 +48,10 @@ class MessageResilient implements MessageResilientInterface
 
         /** @var RabbitMQQueue $rabbitmq */
         $rabbitmq = Queue::connection($connection);
-        $this->incrementRedeliveryCount($message, $reason);
+        $this->incrementRetry($message, $reason);
         $rabbitmq->retryMessage($message, $configurations);
 
-        logger()->info('message-retried', $message->toArray());
+        logger()->info('message-retried', $message->properties->toArray());
 
         return $message;
     }
@@ -78,7 +79,7 @@ class MessageResilient implements MessageResilientInterface
      */
     public function deadLetter(ListenMessageModel $message, string $connection = null): ListenMessageModel
     {
-        $connection = $connection ?? $message->getConnection();
+        $connection = $connection ?? $message->metadata->get('connection');
         if(!$this->canDeadLetter($connection)){
             return $message;
         }
@@ -103,7 +104,7 @@ class MessageResilient implements MessageResilientInterface
             'retry_queue' => config("queue.connections.$connection.retry_queue"),
             'retry_exchange' => config("queue.connections.$connection.retry_exchange"),
             'retry_exchange_type' => config("queue.connections.$connection.retry_exchange_type"),
-            'retry_exchange_delay' => config("queue.connections.$connection.retry_exchange_delay"),
+            'retry_queue_delay' => config("queue.connections.$connection.retry_queue_delay"),
             'retry_exchange_routing_key' => config("queue.connections.$connection.retry_exchange_routing_key"),
         ];
     }
@@ -127,10 +128,12 @@ class MessageResilient implements MessageResilientInterface
      * @param Throwable $reason
      * @return void
      */
-    protected function incrementRedeliveryCount(ListenMessageModel $message, Throwable $reason): void
+    protected function incrementRetry(ListenMessageModel $message, Throwable $reason): void
     {
-        $message->properties->put('redelivery_count', $message->properties->get('redelivery_count', 1) + 1);
-        $exceptions = json_decode($message->properties->get('exceptions', ''));
+        $properties = $message->properties->toArray();
+        $key = static::getTriesKey();
+        data_set($properties, $key, data_get($properties, $key, 0) + 1);
+        $exceptions = json_decode(data_get($properties, 'application_headers.exceptions', '[]'));
         $exceptions[] = [
             'reason' => class_basename($reason),
             'message' => $reason->getMessage(),
@@ -138,6 +141,23 @@ class MessageResilient implements MessageResilientInterface
             'line' => $reason->getLine(),
             'failed_at' => now()->toIso8601String(),
         ];
-        $message->properties->put('exceptions', json_encode($exceptions));
+        data_set($properties, 'application_headers.exceptions', json_encode($exceptions));
+        $message->properties = $properties;
+    }
+
+    /**
+     * @return string
+     */
+    public static function getTriesKey(): string
+    {
+        return 'application_headers.tries';
+    }
+
+    /**
+     * @return int
+     */
+    public static function getMaxTries(): int
+    {
+        return config('rabbitmq-messages.max_tries');
     }
 }

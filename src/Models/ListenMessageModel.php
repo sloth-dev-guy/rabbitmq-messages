@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasTimestamps;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use SlothDevGuy\RabbitMQMessages\Models\Enums\ListenMessageStatusEnum;
+use Throwable;
 
 /**
  * Class ListenEvent
@@ -68,14 +69,18 @@ class ListenMessageModel extends Model
         ]);
     }
 
-    public function setAsFailed(Carbon $failedAt = null): void
+    public function setAsFailed(Throwable $reason = null, Carbon $failedAt = null): void
     {
         $failedAt = $failedAt ?? now();
-
-        $this->status = ListenMessageStatusEnum::FAILED;
-        $this->metadata = $this->metadata->merge([
+        $exceptions = $this->metadata->get('exceptions', []);
+        $exceptions[] = [
+            'message' => $reason?->getMessage(),
             'failed_at' => $failedAt->toIso8601String(),
+        ];
+        $this->metadata = $this->metadata->merge([
+            'exceptions' => $exceptions,
         ]);
+        $this->status = ListenMessageStatusEnum::FAILED;
     }
 
     /**
