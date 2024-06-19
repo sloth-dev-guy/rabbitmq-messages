@@ -22,7 +22,7 @@ class ListenMessageTest extends TestCase
     public function testMessageListen(): void
     {
         $message = 'test-message-listen';
-        Config::set("queue.message_handlers.$message", MockMessageHandler::class);
+        Config::set("rabbitmq-messages.message_handlers.$message", MockMessageHandler::class);
         $this->app->register(RabbitMQMessagesServiceProvider::class);
         $configurations = $this->declareQueue();
 
@@ -39,7 +39,7 @@ class ListenMessageTest extends TestCase
         $this->assertEquals(ListenMessageStatusEnum::PROCESSED, $actualMessage->status);
         $this->assertEquals($message->name, $actualMessage->name);
         $this->assertEquals($message->uuid, $actualMessage->uuid);
-        $this->assertEmpty($message->payload->diff($actualMessage->payload));
+        $this->assertEquals($message->payload->toArray(), $actualMessage->payload->toArray());
         $this->assertQueueIsEmpty($configurations['queue']);
     }
 
@@ -78,10 +78,36 @@ class ListenMessageTest extends TestCase
         $this->assertEquals(ListenMessageStatusEnum::FAILED, $actualMessage->status);
         $this->assertEquals($message->name, $actualMessage->name);
         $this->assertEquals($message->uuid, $actualMessage->uuid);
-        $this->assertEmpty($message->payload->diff($actualMessage->payload));
+        $this->assertEquals($message->payload->toArray(), $actualMessage->payload->toArray());
         $this->assertNotEmpty($actualMessage->metadata->get('exceptions'));
         $this->assertQueueIsEmpty($configurations['queue']);
     }
+
+    public function testNoRetries(): void
+    {
+        $message = 'test-message-listen';
+        Config::set("rabbitmq-messages.message_handlers.$message", MockFailedMessageHandler::class);
+        Config::set('rabbitmq-messages.max_tries', 0);
+        Config::set('queue.connections.rabbitmq.retry_queue_delay', 1000);
+        $this->app->register(RabbitMQMessagesServiceProvider::class);
+        $configurations = $this->declareQueue();
+
+        $payload = collect(static::makeFakePayload());
+        $message = RabbitMQMessage::dispatchMessage($message, $payload)->fresh();
+        $this->assertConsume($configurations['queue']);
+        $this->assertDatabaseHas('listen_message', [
+            'uuid' => $message->uuid,
+        ]);
+
+        $actualMessage = ListenMessageModel::findByUuid($message->uuid);
+        $this->assertEquals(ListenMessageStatusEnum::FAILED, $actualMessage->status);
+        $this->assertEquals($message->name, $actualMessage->name);
+        $this->assertEquals($message->uuid, $actualMessage->uuid);
+        $this->assertEquals($message->payload->toArray(), $actualMessage->payload->toArray());
+        $this->assertNotEmpty($actualMessage->metadata->get('exceptions'));
+        $this->assertQueueIsEmpty($configurations['queue']);
+    }
+
 
     public function testRetryMessage(): void
     {
@@ -120,7 +146,27 @@ class ListenMessageTest extends TestCase
 
     public function testDeadLetterMessage(): void
     {
+        $message = 'test-message-listen';
+        Config::set("rabbitmq-messages.message_handlers.$message", MockFailedMessageHandler::class);
+        Config::set('rabbitmq-messages.max_tries', $maxRetries = 1);
+        Config::set('queue.connections.rabbitmq.retry_queue_delay', 1000);
+        $this->app->register(RabbitMQMessagesServiceProvider::class);
+        $configurations = $this->declareQueue();
 
+        $payload = collect(static::makeFakePayload());
+        RabbitMQMessage::dispatchMessage($message, $payload)->fresh();
+
+        $sleep = ceil(config('queue.connections.rabbitmq.retry_queue_delay') / 1000);
+        for ($i = 0; $i < $maxRetries; $i++) {
+            $this->assertConsume($configurations['queue']);
+            sleep($sleep);
+        }
+
+        $this->assertConsume($configurations['queue']);
+
+        $this->assertDatabaseEmpty('listen_message');
+        $this->assertQueueIsEmpty($configurations['queue']);
+        $this->assertQueueIsNotEmpty(config('queue.connections.rabbitmq.dead_letter_queue'));
     }
 
     protected static function makeFakePayload(): array
@@ -188,6 +234,19 @@ class ListenMessageTest extends TestCase
         $rabbitmq = Queue::connection($connection);
 
         $this->assertNull($rabbitmq->getChannel()->basic_get($queue, true));
+    }
+
+    /**
+     * @param string $queue
+     * @param string $connection
+     * @return void
+     */
+    protected function assertQueueIsNotEmpty(string $queue, string $connection = 'rabbitmq'): void
+    {
+        /** @var RabbitMQQueue $rabbitmq */
+        $rabbitmq = Queue::connection($connection);
+
+        $this->assertNotNull($rabbitmq->getChannel()->basic_get($queue, true));
     }
 
     /**

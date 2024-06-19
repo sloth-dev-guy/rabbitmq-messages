@@ -32,7 +32,7 @@ class MessageExhausted
         $tries = data_get($message->properties, MessageResilient::getTriesKey(), 0);
         $maxTries = MessageResilient::getMaxTries();
 
-        if($tries >= $maxTries){
+        if($maxTries && $tries >= $maxTries){
             $message = "Message retries exhausted, retries[$tries] >= max-retries[$maxTries]";
             throw new MessageRetriesExhaustedException($message);
         }

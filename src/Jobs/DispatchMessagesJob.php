@@ -44,14 +44,14 @@ class DispatchMessagesJob implements ShouldQueue
                 $rabbitmq = Queue::connection($connection);
                 $rabbitmq->dispatchMessage($this->dispatchEvent);
 
-                logger()->info('event-published', $this->dispatchEvent->toArray());
+                logger()->info('event-published', $this->dispatchEvent->properties->toArray());
 
                 $this->dispatchEvent->setDispatchedAt();
                 $this->dispatchEvent->save();
             });
         }
         catch (Throwable $e) {
-            logger()->error("event-publish failed: {$e->getMessage()}", $this->dispatchEvent->toArray());
+            logger()->error("event-publish failed: {$e->getMessage()}", $this->dispatchEvent->properties->toArray());
 
             $this->dispatchEvent->setFailedAt();
             $this->dispatchEvent->save();

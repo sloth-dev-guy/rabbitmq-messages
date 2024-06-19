@@ -168,7 +168,7 @@ class MessageListener
     {
         $reason = class_basename($ex);
         logger()->info(
-            "message listener failed $reason: {$ex->getMessage()}",
+            "retryMessage, $reason: {$ex->getMessage()}",
             $listenedMessage->properties->toArray()
         );
 
@@ -201,7 +201,7 @@ class MessageListener
     {
         $reason = class_basename($ex);
         logger()->info(
-            "message retries to many times $reason: {$ex->getMessage()}",
+            "deadLetterMessage, $reason: {$ex->getMessage()}",
             $listenedMessage->properties->toArray()
         );
 

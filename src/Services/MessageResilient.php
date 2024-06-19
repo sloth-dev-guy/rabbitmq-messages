@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Queue;
 use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 use SlothDevGuy\RabbitMQMessages\Interfaces\MessageResilientInterface;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
-use SlothDevGuy\RabbitMQMessages\Pipes\MessageExhausted;
 use SlothDevGuy\RabbitMQMessages\RabbitMQQueue;
 use Throwable;
 
@@ -24,7 +23,8 @@ class MessageResilient implements MessageResilientInterface
     {
         $configurations = $this->getRetryConfiguration($connection ?? 'rabbitmq');
 
-        return $configurations['retry_queue']
+        return static::getMaxTries()
+            && $configurations['retry_queue']
             && $configurations['retry_exchange']
             && $configurations['retry_exchange_type']
             && $configurations['retry_exchange_routing_key'];

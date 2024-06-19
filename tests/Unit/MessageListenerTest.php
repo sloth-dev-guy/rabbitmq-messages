@@ -31,7 +31,7 @@ class MessageListenerTest extends TestCase
             $this->validMessage($properties),
         );
 
-        Config::set("queue.message_handlers.{$properties['type']}", MockMessageHandler::class);
+        Config::set("rabbitmq-messages.message_handlers.{$properties['type']}", MockMessageHandler::class);
 
         $registerMessage = new MessageListener(MockMessageHandler::mockListenMessageModel());
         $message = $registerMessage->sendMessageThroughPipes($message, 'foo-queue', 'foo-connection');
@@ -103,7 +103,7 @@ class MessageListenerTest extends TestCase
             $this->validMessage($properties),
         );
 
-        Config::set("queue.message_handlers.{$properties['type']}", MockMessageHandler::class);
+        Config::set("rabbitmq-messages.message_handlers.{$properties['type']}", MockMessageHandler::class);
 
         $registerMessage = new MessageListener($listenMessage = MockMessageHandler::mockListenMessageModel());
         $listenMessage::$fails['save'] = true;
@@ -136,7 +136,7 @@ class MessageListenerTest extends TestCase
             $this->validMessage($properties),
         );
 
-        Config::set("queue.message_handlers.{$properties['type']}", MockMessageHandler::class);
+        Config::set("rabbitmq-messages.message_handlers.{$properties['type']}", MockMessageHandler::class);
 
         $registerMessage = new MessageListener($listenMessage = MockMessageHandler::mockListenMessageModel());
         /** @noinspection PhpUndefinedVariableInspection */

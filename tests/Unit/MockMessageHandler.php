@@ -67,8 +67,10 @@ class MockMessageHandler implements MessageHandlerInterface
              */
             public function save(array $options = [])
             {
-                if(static::$fails['save'])
+                if(static::$fails['save']) {
+                    static::$fails['save'] = false;
                     throw new QueryException('test-connection', 'select now()', [], new Exception());
+                }
             }
 
             /**
@@ -77,8 +79,10 @@ class MockMessageHandler implements MessageHandlerInterface
              */
             public function delete()
             {
-                if(static::$fails['delete'])
+                if(static::$fails['delete']) {
+                    static::$fails['delete'] = false;
                     throw new QueryException('test-connection', 'select now()', [], new Exception());
+                }
             }
 
             /**
@@ -87,8 +91,10 @@ class MockMessageHandler implements MessageHandlerInterface
              */
             public static function findByUuid(string $uuid): static|null
             {
-                if(static::$fails['find'])
+                if(static::$fails['find']) {
+                    static::$fails['find'] = false;
                     throw new QueryException('test-connection', 'select now()', [], new Exception());
+                }
 
                 return static::$findReturn;
             }
