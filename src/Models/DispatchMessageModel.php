@@ -73,18 +73,21 @@ class DispatchMessageModel extends Model
     }
 
     /**
-     * @param Throwable|null $exception
+     * @param Throwable|null $reason
      * @param Carbon|null $failedAt
      * @return void
      */
-    public function setFailedAt(Throwable $exception = null, Carbon $failedAt = null): void
+    public function setFailedAt(Throwable $reason = null, Carbon $failedAt = null): void
     {
         $failedAt = $failedAt ?? now();
         $exceptions = $this->metadata->get('exceptions', []);
         $exceptions[] = [
-            'message' => $exception?->getMessage(),
+            'message' => $reason?->getMessage(),
             'failed_at' => $failedAt->toIso8601String(),
         ];
+        $this->metadata = $this->metadata->merge([
+            'exceptions' => $exceptions,
+        ]);
         $this->status  = DispatchMessageStatusEnum::FAILED;
     }
 }

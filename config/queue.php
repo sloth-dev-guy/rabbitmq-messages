@@ -1,6 +1,7 @@
 <?php
 
 use PhpAmqpLib\Exchange\AMQPExchangeType;
+use SlothDevGuy\RabbitMQMessages\RabbitMQJob;
 use SlothDevGuy\RabbitMQMessages\RabbitMQQueue;
 
 return [
@@ -91,7 +92,7 @@ return [
             'options' => [
                 'queue' => [
                     'exchange' => env('RABBITMQ_EXCHANGE', 'amq.fanout'),
-                    'exchange_type' => env('RABBITMQ_EXCHANGE_TYPE', 'fanout'),
+                    'exchange_type' => env('RABBITMQ_EXCHANGE_TYPE', AMQPExchangeType::FANOUT),
                     'exchange_routing_key' => config('RABBITMQ_ROUTING_KEY', ''),
                     'job' => RabbitMQJob::class,
 //                    'reroute_failed' => true,
@@ -102,21 +103,17 @@ return [
             //message customizations
             'worker' => RabbitMQQueue::class,
             'app_id' => env('RABBITMQ_APP_ID'),
-            'listen_events_mapping' => env(
-                'RABBITMQ_LISTEN_EVENTS_MAPPING',
-                '/app/database/listen_events_mapping.json'
-            ),
             //retries configuration
             'retry_queue' => env('RABBITMQ_RETRY_QUEUE'),
-            'retry_exchange' => env('RABBITMQ_RETRY_EXCHANGE'),
+            'retry_queue_delay' => env('RABBITMQ_RETRY_QUEUE_DELAY', 3000),
+            'retry_exchange' => env('RABBITMQ_RETRY_EXCHANGE', 'amq.direct'),
             'retry_exchange_type' => env('RABBITMQ_RETRY_EXCHANGE_TYPE', AMQPExchangeType::DIRECT),
-            'retry_exchange_delay' => env('RABBITMQ_RETRY_EXCHANGE_DELAY', 3000),
-            'retry_exchange_routing_key' => config('RABBITMQ_RETRY_EXCHANGE_KEY'),
+            'retry_exchange_routing_key' => env('RABBITMQ_RETRY_ROUTING_KEY'),
             //dead letter configuration
             'dead_letter_queue' => env('RABBITMQ_DEAD_LETTER_QUEUE'),
-            'dead_letter_exchange' => env('RABBITMQ_DEAD_LETTER_EXCHANGE'),
-            'dead_letter_exchange_type' => env('RABBITMQ_DEAD_LETTER_EXCHANGE_TYPE'),
-            'dead_letter_exchange_routing_key' => env('RABBITMQ_DEAD_LETTER_EXCHANGE_KEY'),
+            'dead_letter_exchange' => env('RABBITMQ_DEAD_LETTER_EXCHANGE', 'amq.direct'),
+            'dead_letter_exchange_type' => env('RABBITMQ_DEAD_LETTER_EXCHANGE_TYPE', AMQPExchangeType::DIRECT),
+            'dead_letter_exchange_routing_key' => env('RABBITMQ_DEAD_LETTER_ROUTING_KEY'),
         ],
     ],
 

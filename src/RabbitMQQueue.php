@@ -7,6 +7,7 @@ use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 use PhpAmqpLib\Message\AMQPMessage;
 use SlothDevGuy\RabbitMQMessages\Models\DispatchMessageModel;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
+use SlothDevGuy\RabbitMQMessages\Pipes\Casts\CastAMQPMessageProperties;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue as BaseRabbitMQQueue;
 
 /**
@@ -68,7 +69,7 @@ class RabbitMQQueue extends BaseRabbitMQQueue
      *     retry_queue: string,
      *     retry_exchange: string,
      *     retry_exchange_type: string,
-     *     retry_exchange_delay: int,
+     *     retry_queue_delay: int,
      *     retry_exchange_routing_key: string,
      * } $configurations
      * @return ListenMessageModel
@@ -80,11 +81,11 @@ class RabbitMQQueue extends BaseRabbitMQQueue
 
         //$channel->queue_bind('my-queue', 'my-exchange', 'my-routing-key');
         // Create a queue for amq.direct publishing.
-        if($this->isQueueDeclared($configurations['retry_queue'])) {
+        if(!$this->isQueueDeclared($configurations['retry_queue'])) {
             $this->declareQueue($configurations['retry_queue'], true, false, [
                 'x-dead-letter-exchange' => $message->metadata->get('exchange'),
                 'x-dead-letter-routing-key' => $message->metadata->get('routing_key'),
-                'x-message-ttl' => $configurations['retry_exchange_delay'],
+                'x-message-ttl' => $configurations['retry_queue_delay'],
             ]);
 
             $this->bindQueue(
@@ -119,7 +120,7 @@ class RabbitMQQueue extends BaseRabbitMQQueue
     {
         $this->declareDestination('', $configurations['dead_letter_exchange'], $configurations['dead_letter_exchange_type']);
 
-        if($this->isQueueDeclared($configurations['dead_letter_queue'])) {
+        if(!$this->isQueueDeclared($configurations['dead_letter_queue'])) {
             $this->declareQueue($configurations['dead_letter_queue']);
 
             $this->bindQueue(
@@ -147,6 +148,6 @@ class RabbitMQQueue extends BaseRabbitMQQueue
     {
         $payload = $message->payload->toJson(JSON_THROW_ON_ERROR);
 
-        return new AMQPMessage($payload, $message->properties->toArray());
+        return new AMQPMessage($payload, CastAMQPMessageProperties::fromListenedMessage($message));
     }
 }

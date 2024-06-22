@@ -9,5 +9,11 @@ return [
     'models' => [
         'dispatch_message' => DispatchMessageModel::class,
         'listen_message' => ListenMessageModel::class,
-    ]
+    ],
+
+    'message_handlers' => [
+
+    ],
+
+    'max_tries' => env('RABBITMQ_MESSAGES_MAX_TRIES', 3),
 ];

@@ -24,9 +24,15 @@ class RabbitMQJob extends BaseRabbitMQJob
      */
     public function fire(): void
     {
-        /** @var MessageListener $listener */
-        $listener = app()->make(MessageListener::class);
-        $listener->sendMessageThroughPipes($this->getRabbitMQMessage(), $this->getQueue(), $this->getConnectionName());
-        $this->deleted = true;
+        try{
+            /** @var MessageListener $listener */
+            $listener = app()->make(MessageListener::class);
+            $listener->sendMessageThroughPipes($this->getRabbitMQMessage(), $this->getQueue(), $this->getConnectionName());
+        }
+        catch (Throwable $ex){
+
+        } finally {
+            $this->deleted = true;
+        }
     }
 }

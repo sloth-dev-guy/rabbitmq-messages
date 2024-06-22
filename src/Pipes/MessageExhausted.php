@@ -5,6 +5,7 @@ namespace SlothDevGuy\RabbitMQMessages\Pipes;
 use Closure;
 use SlothDevGuy\RabbitMQMessages\Exceptions\MessageRetriesExhaustedException;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
+use SlothDevGuy\RabbitMQMessages\Services\MessageResilient;
 
 class MessageExhausted
 {
@@ -16,7 +17,7 @@ class MessageExhausted
      */
     public function handle(ListenMessageModel $message, Closure $next): mixed
     {
-        $this->failIfMessageRetriesExhausted($message);
+        $this->failIfMessageTriesExhausted($message);
 
         return $next($message);
     }
@@ -26,21 +27,14 @@ class MessageExhausted
      * @return void
      * @throws MessageRetriesExhaustedException
      */
-    public function failIfMessageRetriesExhausted(ListenMessageModel $message): void
+    public function failIfMessageTriesExhausted(ListenMessageModel $message): void
     {
-        $redeliveryCount = $message->properties->get('redelivery_count', 1);
+        $tries = data_get($message->properties, MessageResilient::getTriesKey(), 0);
+        $maxTries = MessageResilient::getMaxTries();
 
-        if($redeliveryCount > $this->getMaxTries()){
-            $message = "Message retries exhausted, retries[$redeliveryCount] > max-retries[{$this->getMaxTries()}]";
+        if($maxTries && $tries >= $maxTries){
+            $message = "Message retries exhausted, retries[$tries] >= max-retries[$maxTries]";
             throw new MessageRetriesExhaustedException($message);
         }
-    }
-
-    /**
-     * @return int
-     */
-    public function getMaxTries(): int
-    {
-        return 3;
     }
 }
