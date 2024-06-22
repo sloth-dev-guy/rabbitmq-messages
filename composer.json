@@ -1,6 +1,5 @@
 {
     "name" : "sloth-dev-guy/rabbitmq-messages",
-    "version": "0.0.1",
     "description" : "Send messages with resilience and idempotence between different applications using rabbitmq",
     "keywords" : [
         "sloth-dev-guy",
