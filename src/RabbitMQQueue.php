@@ -85,7 +85,7 @@ class RabbitMQQueue extends BaseRabbitMQQueue
             $this->declareQueue($configurations['retry_queue'], true, false, [
                 'x-dead-letter-exchange' => $message->metadata->get('exchange'),
                 'x-dead-letter-routing-key' => $message->metadata->get('routing_key'),
-                'x-message-ttl' => $configurations['retry_queue_delay'],
+                'x-message-ttl' => (int) $configurations['retry_queue_delay'],
             ]);
 
             $this->bindQueue(
