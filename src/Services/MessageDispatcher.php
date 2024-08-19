@@ -24,7 +24,8 @@ class MessageDispatcher implements MessageDispatcherInterface
         protected string|null $connection = null,
     )
     {
-        $this->dispatchMessage = app(config('rabbitmq-messages.models.dispatch_message'));
+        $class = config('rabbitmq-messages.models.dispatch_message', DispatchMessageModel::class);
+        $this->dispatchMessage = app($class);
     }
 
     /**

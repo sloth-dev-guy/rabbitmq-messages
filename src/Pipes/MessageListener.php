@@ -7,7 +7,6 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\Facades\Pipeline;
 use Illuminate\Validation\ValidationException;
 use PhpAmqpLib\Message\AMQPMessage;
-use SlothDevGuy\RabbitMQMessages\Exceptions\MessageAlreadyRegisterException;
 use SlothDevGuy\RabbitMQMessages\Exceptions\MessageRetriesExhaustedException;
 use SlothDevGuy\RabbitMQMessages\Interfaces\SkipListenMessageThrowable;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
@@ -158,6 +157,7 @@ class MessageListener
      * @param string $connection
      * @param Throwable $ex
      * @return void
+     * @throws Throwable
      */
     protected function retryMessage(
         ListenMessageModel $listenedMessage,
@@ -166,21 +166,23 @@ class MessageListener
         Throwable $ex
     ): void
     {
-        $reason = class_basename($ex);
-        logger()->info(
-            "retryMessage, $reason: {$ex->getMessage()}",
-            $listenedMessage->properties->toArray()
-        );
+        $listenedMessage->getConnection()->transaction(function () use($listenedMessage, $message, $connection, $ex){
+            logger()->info('MessageListener::retryMessage', [
+                'reason' => class_basename($ex),
+                'message' => $ex->getMessage(),
+                'properties' => $listenedMessage->properties->toArray(),
+            ]);
 
-        $listenedMessage->setAsFailed($ex);
-        $listenedMessage->save();
+            $listenedMessage->setAsFailed($ex);
+            $listenedMessage->save();
 
-        if (RabbitMQMessage::canRetryMessages($connection)) {
-            $listenedMessage->delete();
-            RabbitMQMessage::retryMessage($listenedMessage, $ex);
-        }
+            if (RabbitMQMessage::canRetryMessages($connection)) {
+                $listenedMessage->delete();
+                RabbitMQMessage::retryMessage($listenedMessage, $ex);
+            }
 
-        $message->nack();
+            $message->nack();
+        });
     }
 
     /**
@@ -189,8 +191,7 @@ class MessageListener
      * @param string $connection
      * @param Throwable $ex
      * @return void
-     * @throws MessageAlreadyRegisterException
-     * @throws BindingResolutionException
+     * @throws Throwable
      */
     protected function deadLetterMessage(
         ListenMessageModel $listenedMessage,
@@ -199,24 +200,26 @@ class MessageListener
         Throwable $ex
     ): void
     {
-        $reason = class_basename($ex);
-        logger()->info(
-            "deadLetterMessage, $reason: {$ex->getMessage()}",
-            $listenedMessage->properties->toArray()
-        );
+        $listenedMessage->getConnection()->transaction(function () use($listenedMessage, $message, $connection, $ex){
+            logger()->info('MessageListener::deadLetterMessage', [
+                'reason' => class_basename($ex),
+                'message' => $ex->getMessage(),
+                'properties' => $listenedMessage->properties->toArray(),
+            ]);
 
-        if(!RabbitMQMessage::canDeadLetterMessages($connection)){
-            /** @var StoreMessage $storeMessage */
-            $storeMessage = app()->make(StoreMessage::class);
-            $storeMessage->storeMessage($listenedMessage);
+            if(!RabbitMQMessage::canDeadLetterMessages($connection)){
+                /** @var StoreMessage $storeMessage */
+                $storeMessage = app()->make(StoreMessage::class);
+                $storeMessage->storeMessage($listenedMessage);
 
-            $listenedMessage->setAsFailed();
-            $listenedMessage->save();
-        }
-        else{
-            RabbitMQMessage::deadLetterMessage($listenedMessage);
-        }
+                $listenedMessage->setAsFailed();
+                $listenedMessage->save();
+            }
+            else{
+                RabbitMQMessage::deadLetterMessage($listenedMessage);
+            }
 
-        $message->reject(false);
+            $message->reject(false);
+        });
     }
 }

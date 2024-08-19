@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function __construct()
     {
-        $this->connection = config('rabbitmq-messages.connection');
+        $this->connection = config('rabbitmq-messages.database_connection');
     }
 
     /**
