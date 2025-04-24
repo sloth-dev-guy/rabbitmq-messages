@@ -3,11 +3,10 @@
 namespace SlothDevGuy\RabbitMQMessages\Pipes;
 
 use Closure;
-use SlothDevGuy\RabbitMQMessages\Exceptions\MessageAlreadyRegisterException;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 use Throwable;
 
-class VerifyMessage
+class MessageValidation
 {
     /**
      * @param ListenMessageModel $message
@@ -23,8 +22,6 @@ class VerifyMessage
             'metadata' => $message->properties->toArray(),
         ], static::rules())->validate();
 
-        static::failIfMessageAlreadyRegistered($message);
-
         return $next($message);
     }
 
@@ -38,17 +35,5 @@ class VerifyMessage
             'payload' => ['required', 'array'],
             'metadata' => ['required', 'array'],
         ];
-    }
-
-    /**
-     * @param ListenMessageModel $message
-     * @return void
-     * @throws MessageAlreadyRegisterException
-     */
-    public static function failIfMessageAlreadyRegistered(ListenMessageModel $message): void
-    {
-        if($exists = $message::findByUuid($message->uuid)){
-            throw new MessageAlreadyRegisterException("Message already registered[$exists->id:$exists->uuid]");
-        }
     }
 }

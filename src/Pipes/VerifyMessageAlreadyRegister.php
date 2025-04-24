@@ -2,11 +2,11 @@
 
 namespace SlothDevGuy\RabbitMQMessages\Pipes;
 
-use Closure;
 use SlothDevGuy\RabbitMQMessages\Exceptions\MessageAlreadyRegisterException;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
+use Closure;
 
-class StoreMessage
+class VerifyMessageAlreadyRegister
 {
     /**
      * @param ListenMessageModel $message
@@ -16,22 +16,20 @@ class StoreMessage
      */
     public function handle(ListenMessageModel $message, Closure $next): mixed
     {
-        $this->storeMessage($message);
+        static::assert($message);
 
         return $next($message);
     }
 
     /**
      * @param ListenMessageModel $message
-     * @return ListenMessageModel
+     * @return void
      * @throws MessageAlreadyRegisterException
      */
-    public function storeMessage(ListenMessageModel $message): ListenMessageModel
+    public static function assert(ListenMessageModel $message): void
     {
-        VerifyMessageAlreadyRegister::assert($message);
-        $message->setAsQueued();
-        $message->save();
-
-        return $message;
+        if($exists = $message::findByUuid($message->uuid)){
+            throw new MessageAlreadyRegisterException("Message already registered[$exists->id:$exists->uuid]");
+        }
     }
 }

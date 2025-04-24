@@ -31,9 +31,12 @@ class MessageListenerTest extends TestCase
             $this->validMessage($properties),
         );
 
-        Config::set("rabbitmq-messages.message_handlers.{$properties['type']}", MockMessageHandler::class);
+        Config::set('rabbitmq-messages.message_handlers', [
+            $properties['type'] => MockMessageHandler::class,
+        ]);
 
-        $registerMessage = new MessageListener(MockMessageHandler::mockListenMessageModel());
+        $this->app->bind(ListenMessageModel::class, fn() => MockMessageHandler::mockListenMessageModel());
+        $registerMessage = new MessageListener();
         $message = $registerMessage->sendMessageThroughPipes($message, 'foo-queue', 'foo-connection');
 
         $this->assertEquals($properties['app_id'], $message->properties->get('app_id'));
@@ -59,12 +62,15 @@ class MessageListenerTest extends TestCase
             $this->validMessage($properties),
         );
 
-        Config::set("queue.message_handlers.{$properties['type']}", MockMessageHandler::class);
+        Config::set('rabbitmq-messages.message_handlers', [
+            $properties['type'] => MockMessageHandler::class,
+        ]);
 
         $mock = MockMessageHandler::mockListenMessageModel();
         $mock::$findReturn = new $mock;
+        $this->app->bind(ListenMessageModel::class, fn() => $mock);
 
-        $registerMessage = new MessageListener($mock);
+        $registerMessage = new MessageListener();
         $registerMessage->sendMessageThroughPipes($message, 'foo-queue', 'foo-connection');
     }
 
@@ -77,7 +83,8 @@ class MessageListenerTest extends TestCase
         $this->expectException(ValidationException::class);
         $message = $this->mockRabbitMQMessage([], '');
 
-        $registerMessage = new MessageListener(MockMessageHandler::mockListenMessageModel());
+        $this->app->bind(ListenMessageModel::class, fn() => MockMessageHandler::mockListenMessageModel());
+        $registerMessage = new MessageListener();
         $registerMessage->sendMessageThroughPipes($message, 'foo-queue', 'foo-connection');
     }
 
@@ -103,11 +110,15 @@ class MessageListenerTest extends TestCase
             $this->validMessage($properties),
         );
 
-        Config::set("rabbitmq-messages.message_handlers.{$properties['type']}", MockMessageHandler::class);
+        Config::set('rabbitmq-messages.message_handlers', [
+            $properties['type'] => MockMessageHandler::class,
+        ]);
 
-        $registerMessage = new MessageListener($listenMessage = MockMessageHandler::mockListenMessageModel());
+        $listenMessage = MockMessageHandler::mockListenMessageModel();
         $listenMessage::$fails['save'] = true;
         $listenMessage::$findReturn = null;
+        $this->app->bind(ListenMessageModel::class, fn() => $listenMessage);
+        $registerMessage = new MessageListener();
 
         RabbitMQMessage::shouldReceive('retryMessage')
             ->once()
@@ -136,9 +147,13 @@ class MessageListenerTest extends TestCase
             $this->validMessage($properties),
         );
 
-        Config::set("rabbitmq-messages.message_handlers.{$properties['type']}", MockMessageHandler::class);
+        Config::set('rabbitmq-messages.message_handlers', [
+            $properties['type'] => MockMessageHandler::class,
+        ]);
 
-        $registerMessage = new MessageListener($listenMessage = MockMessageHandler::mockListenMessageModel());
+        $listenMessage = MockMessageHandler::mockListenMessageModel();
+        $this->app->bind(ListenMessageModel::class, fn() => $listenMessage);
+        $registerMessage = new MessageListener();
         /** @noinspection PhpUndefinedVariableInspection */
         /** @noinspection PhpFieldAssignmentTypeMismatchInspection */
         /** @noinspection PhpPossiblePolymorphicInvocationInspection */
