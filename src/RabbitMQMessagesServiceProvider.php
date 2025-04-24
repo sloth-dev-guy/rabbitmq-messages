@@ -29,6 +29,12 @@ class RabbitMQMessagesServiceProvider extends ServiceProvider
 
         $helper = $this->app->make(FacadeService::class);
         $this->app->instance(RabbitMQMessage::ACCESSOR, $helper);
+
+        if($this->app->runningInConsole()){
+            $this->commands([
+                Console\InstallCommand::class,
+            ]);
+        }
     }
 
     /**
@@ -59,5 +65,10 @@ class RabbitMQMessagesServiceProvider extends ServiceProvider
             __DIR__ . '/../database/migrations/2024_05_20_152036_create_rabbitmq_messages_tables.php' =>
                 database_path('migrations/2024_05_20_152036_create_rabbitmq_messages_tables.php'),
         ], 'rabbitmq-messages-migrations');
+
+        $this->publishes([
+            __DIR__ . '/../config/rabbitmq-messages.php' => config_path('rabbitmq-messages.php'),
+            __DIR__ . '/../config/queue.php' => config_path('queue.php'),
+        ], 'rabbitmq-messages-config');
     }
 }

@@ -93,11 +93,8 @@ return [
                 'queue' => [
                     'exchange' => env('RABBITMQ_EXCHANGE', 'amq.fanout'),
                     'exchange_type' => env('RABBITMQ_EXCHANGE_TYPE', AMQPExchangeType::FANOUT),
-                    'exchange_routing_key' => config('RABBITMQ_ROUTING_KEY', ''),
+                    'exchange_routing_key' => env('RABBITMQ_ROUTING_KEY', ''),
                     'job' => RabbitMQJob::class,
-//                    'reroute_failed' => true,
-//                    'failed_exchange' => 'failed-exchange',
-//                    'failed_routing_key' => 'application-x.%s',
                 ],
             ],
             //message customizations
@@ -109,6 +106,42 @@ return [
             'retry_exchange' => env('RABBITMQ_RETRY_EXCHANGE', 'amq.direct'),
             'retry_exchange_type' => env('RABBITMQ_RETRY_EXCHANGE_TYPE', AMQPExchangeType::DIRECT),
             'retry_exchange_routing_key' => env('RABBITMQ_RETRY_ROUTING_KEY'),
+            //dead letter configuration
+            'dead_letter_queue' => env('RABBITMQ_DEAD_LETTER_QUEUE'),
+            'dead_letter_exchange' => env('RABBITMQ_DEAD_LETTER_EXCHANGE', 'amq.direct'),
+            'dead_letter_exchange_type' => env('RABBITMQ_DEAD_LETTER_EXCHANGE_TYPE', AMQPExchangeType::DIRECT),
+            'dead_letter_exchange_routing_key' => env('RABBITMQ_DEAD_LETTER_ROUTING_KEY'),
+        ],
+
+        'rabbitmq_topic' => [
+            'driver' => 'rabbitmq',
+            'queue' => env('RABBITMQ_QUEUE', 'default'),
+            'after_commit' => true,
+            'hosts' => [
+                [
+                    'host' => env('RABBITMQ_HOST', '127.0.0.1'),
+                    'port' => env('RABBITMQ_PORT', 5672),
+                    'user' => env('RABBITMQ_USERNAME', 'guest'),
+                    'password' => env('RABBITMQ_PASSWORD', 'guest'),
+                    'vhost' => env('RABBITMQ_VHOST', '/'),
+                ],
+            ],
+            'options' => [
+                'queue' => [
+                    'exchange' => env('RABBITMQ_TOPIC_EXCHANGE', 'amq.topic'),
+                    'exchange_type' => env('RABBITMQ_TOPIC_EXCHANGE_TYPE', AMQPExchangeType::TOPIC),
+                    'exchange_routing_key' => env('RABBITMQ_TOPIC_ROUTING_KEY', ''),
+                    'job' => RabbitMQJob::class,
+                ],
+            ],
+            'worker' => RabbitMQQueue::class,
+            'app_id' => env('RABBITMQ_APP_ID'),
+            //retries configuration
+            'retry_queue' => env('RABBITMQ_TOPIC_RETRY_QUEUE'),
+            'retry_queue_delay' => env('RABBITMQ_RETRY_QUEUE_DELAY', 3000),
+            'retry_exchange' => env('RABBITMQ_RETRY_EXCHANGE', 'amq.direct'),
+            'retry_exchange_type' => env('RABBITMQ_RETRY_EXCHANGE_TYPE', AMQPExchangeType::DIRECT),
+            'retry_exchange_routing_key' => env('RABBITMQ_TOPIC_RETRY_ROUTING_KEY'),
             //dead letter configuration
             'dead_letter_queue' => env('RABBITMQ_DEAD_LETTER_QUEUE'),
             'dead_letter_exchange' => env('RABBITMQ_DEAD_LETTER_EXCHANGE', 'amq.direct'),

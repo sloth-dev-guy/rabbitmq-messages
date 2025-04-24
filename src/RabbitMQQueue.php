@@ -7,7 +7,6 @@ use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 use PhpAmqpLib\Message\AMQPMessage;
 use SlothDevGuy\RabbitMQMessages\Models\DispatchMessageModel;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
-use SlothDevGuy\RabbitMQMessages\Pipes\Casts\CastAMQPMessageProperties;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue as BaseRabbitMQQueue;
 
 /**
@@ -148,6 +147,6 @@ class RabbitMQQueue extends BaseRabbitMQQueue
     {
         $payload = $message->payload->toJson(JSON_THROW_ON_ERROR);
 
-        return new AMQPMessage($payload, CastAMQPMessageProperties::fromListenedMessage($message));
+        return new AMQPMessage($payload, RabbitMQProperties::fromListenedMessage($message));
     }
 }

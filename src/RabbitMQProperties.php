@@ -1,14 +1,13 @@
 <?php
 
-namespace SlothDevGuy\RabbitMQMessages\Pipes\Casts;
+namespace SlothDevGuy\RabbitMQMessages;
 
 use Illuminate\Support\Str;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
-use phpseclib3\Crypt\EC\BaseCurves\Binary;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 
-class CastAMQPMessageProperties
+class RabbitMQProperties
 {
     /**
      * @param AMQPTable $table
@@ -33,6 +32,10 @@ class CastAMQPMessageProperties
         return $properties;
     }
 
+    /**
+     * @param ListenMessageModel $message
+     * @return array
+     */
     public static function fromListenedMessage(ListenMessageModel $message): array
     {
         $properties = $message->properties->toArray();
@@ -43,6 +46,10 @@ class CastAMQPMessageProperties
         return $properties;
     }
 
+    /**
+     * @param array $headers
+     * @return AMQPTable
+     */
     public static function castAsAMQPTable(array $headers): AMQPTable
     {
         $table = new AMQPTable();

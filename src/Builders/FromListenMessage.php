@@ -1,14 +1,16 @@
 <?php
 
-namespace SlothDevGuy\RabbitMQMessages\Pipes;
+namespace SlothDevGuy\RabbitMQMessages\Builders;
 
 use Closure;
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use SlothDevGuy\RabbitMQMessages\Exceptions\MessageWithoutHandlerException;
 use SlothDevGuy\RabbitMQMessages\Interfaces\MessageHandlerInterface;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 
-class MessageHandlerBuilder
+class FromListenMessage
 {
     protected MessageHandlerInterface $handler;
 
@@ -21,7 +23,7 @@ class MessageHandlerBuilder
      */
     public function handle(ListenMessageModel $message, Closure $next): mixed
     {
-        $this->handler = $this->build($message);
+        $this->handler = $this->buildMessageHandler($message);
 
         return $next($message);
     }
@@ -32,9 +34,14 @@ class MessageHandlerBuilder
      * @throws BindingResolutionException
      * @throws MessageWithoutHandlerException
      */
-    public function build(ListenMessageModel $message): MessageHandlerInterface
+    public function buildMessageHandler(ListenMessageModel $message): MessageHandlerInterface
     {
-        $handler = @config('rabbitmq-messages.message_handlers')[$message->name];
+        $handlers = config('rabbitmq-messages.message_handlers');
+        $handler = @$handlers[$message->name] ?? Arr::first(array_filter(
+            $handlers,
+            fn($key) => Str::startsWith($key, '/'),
+            ARRAY_FILTER_USE_KEY
+        ), fn($handler, $pattern) => preg_match($pattern, $message->name));
 
         if(is_null($handler)){
             throw new MessageWithoutHandlerException("No handler for message: $message->name");
