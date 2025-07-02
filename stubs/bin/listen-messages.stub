@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+cd /app || exit
+
+if test -f .env; then
+    set -o allexport
+    source .env
+    set +o allexport
+    echo "environment variables loaded"
+fi
+
+CONNECTION="${CONNECTION:-rabbitmq}"
+RABBITMQ_EXCHANGE="${RABBITMQ_EXCHANGE:-amq.fanout}"
+RABBITMQ_EXCHANGE_TYPE="${RABBITMQ_EXCHANGE_TYPE:-fanout}"
+RABBITMQ_TOPIC_EXCHANGE="${RABBITMQ_TOPIC_EXCHANGE:-amq.topic}"
+RABBITMQ_TOPIC_EXCHANGE_TYPE="${RABBITMQ_TOPIC_EXCHANGE_TYPE:-topic}"
+QUEUE_NAME="${RABBITMQ_QUEUE:-default}"
+MAX_JOBS="${MAX_JOBS:-30000}"
+MAX_MEMORY="${MAX_MEMORY:-128}"
+JOB_TIMEOUT="${JOB_TIMEOUT:-300}"
+TIMEOUT="${TIMEOUT:-600}"
+DAEMON_SLEEP="${DAEMON_SLEEP:-30}"
+
+php artisan rabbitmq:exchange-declare "$RABBITMQ_EXCHANGE" "$CONNECTION" --type "$RABBITMQ_EXCHANGE_TYPE"
+php artisan rabbitmq:exchange-declare "$RABBITMQ_TOPIC_EXCHANGE" "$CONNECTION" --type "$RABBITMQ_TOPIC_EXCHANGE_TYPE"
+php artisan rabbitmq:queue-declare "$QUEUE_NAME" "$CONNECTION"
+php artisan rabbitmq:queue-bind "$QUEUE_NAME" "$RABBITMQ_EXCHANGE" "$CONNECTION"
+php artisan rabbitmq:queue-bind "$QUEUE_NAME" "$RABBITMQ_TOPIC_EXCHANGE" "$CONNECTION" --routing-key "$RABBITMQ_TOPIC_ROUTING_KEY"
+
+echo "Processing jobs from the [${QUEUE_NAME}] queue"
+
+set -e
+while true; do
+    (timeout --preserve-status --foreground "${TIMEOUT}" php artisan rabbitmq:consume "${CONNECTION}" \
+        --name "${QUEUE_NAME}" \
+        --queue "${QUEUE_NAME}" \
+        --max-jobs "${MAX_JOBS}" \
+        --memory "${MAX_MEMORY}" \
+        --json \
+        --timeout "${JOB_TIMEOUT}") || {
+            echo "unexcepted error exit the daemon"
+            exit 1
+        }
+
+    echo "$(date '+%Y-%m-%dT%H:%M:%S.%6N%:z') daemon sleep ${DAEMON_SLEEP}"
+    sleep "${DAEMON_SLEEP}"
+    echo "$(date '+%Y-%m-%dT%H:%M:%S.%6N%:z') restarting consumer for queue ${QUEUE_NAME}"
+done

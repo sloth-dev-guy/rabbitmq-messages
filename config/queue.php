@@ -76,6 +76,16 @@ return [
             'after_commit' => false,
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Fanout configuration
+        |--------------------------------------------------------------------------
+        |
+        | Fanout messages are the default type of message in order to notify any
+        | application connected to this rabbitmq server with queues bounded to
+        | this fanout exchange
+        |
+        */
         'rabbitmq' => [
             'driver' => 'rabbitmq',
             'queue' => env('RABBITMQ_QUEUE', 'default'),
@@ -113,6 +123,16 @@ return [
             'dead_letter_exchange_routing_key' => env('RABBITMQ_DEAD_LETTER_ROUTING_KEY'),
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Topic configuration
+        |--------------------------------------------------------------------------
+        |
+        | Topic messages are secondary type of message in order to notify any
+        | application connected to this rabbitmq server with queues bounded to
+        | this topic exchange
+        |
+        */
         'rabbitmq_topic' => [
             'driver' => 'rabbitmq',
             'queue' => env('RABBITMQ_QUEUE', 'default'),
