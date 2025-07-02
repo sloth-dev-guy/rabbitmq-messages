@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+cd /app || exit
+
+if test -f .env; then
+    set -o allexport
+    source .env
+    set +o allexport
+    echo "environment variables loaded"
+fi
+
+QUEUE_NAME=${QUEUE_NAME:-"rabbitmq-messages.dispatch-queue"}
+MAX_JOBS="${MAX_JOBS:-10000}"
+MAX_MEMORY="${MAX_MEMORY:-128}"
+JOB_TIMEOUT="${JOB_TIMEOUT:-300}"
+TIMEOUT="${TIMEOUT:-600}"
+JOB_RETRIES="${JOB_RETRIES:-3}"
+DAEMON_SLEEP="${DAEMON_SLEEP:-30}"
+
+echo "Processing jobs from the [${QUEUE_NAME}] queue"
+
+set -e
+while true; do
+    #for resending the publish of failed messages
+    #php artisan queue:retry --queue "${QUEUE_NAME}"
+    (timeout --preserve-status --foreground "${TIMEOUT}" php artisan queue:work \
+        --queue "${QUEUE_NAME}" \
+        --max-jobs "${MAX_JOBS}" \
+        --memory "${MAX_MEMORY}" \
+        --timeout "${JOB_TIMEOUT}" \
+        --tries "${JOB_RETRIES}" \
+        --json
+    ) || {
+        echo "unexcepted error exit the daemon"
+        exit 1
+    }
+
+    echo "$(date '+%Y-%m-%dT%H:%M:%S.%6N%:z') daemon sleep ${DAEMON_SLEEP}"
+    sleep "${DAEMON_SLEEP}"
+    echo "$(date '+%Y-%m-%dT%H:%M:%S.%6N%:z') restarting consumer for queue ${QUEUE_NAME}"
+done

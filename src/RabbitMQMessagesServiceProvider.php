@@ -70,5 +70,10 @@ class RabbitMQMessagesServiceProvider extends ServiceProvider
             __DIR__ . '/../config/rabbitmq-messages.php' => config_path('rabbitmq-messages.php'),
             __DIR__ . '/../config/queue.php' => config_path('queue.php'),
         ], 'rabbitmq-messages-config');
+
+        $this->publishes([
+            __DIR__ . '/../stubs/bin/dispatch-messages.stub' => base_path('etc/bin/dispatch-messages.sh'),
+            __DIR__ . '/../stubs/bin/listen-messages.stub' => base_path('etc/bin/listen-messages.sh'),
+        ], 'rabbitmq-messages-bin');
     }
 }
