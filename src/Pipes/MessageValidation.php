@@ -3,6 +3,7 @@
 namespace SlothDevGuy\RabbitMQMessages\Pipes;
 
 use Closure;
+use SlothDevGuy\RabbitMQMessages\Exceptions\NonRetriableMessageException;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 use Throwable;
 
@@ -16,11 +17,15 @@ class MessageValidation
      */
     public function handle(ListenMessageModel $message, Closure $next): mixed
     {
-        validator([
-            'properties' => $message->properties->toArray(),
-            'payload' => $message->properties->toArray(),
-            'metadata' => $message->properties->toArray(),
-        ], static::rules())->validate();
+        try {
+            validator([
+                'properties' => $message->properties->toArray(),
+                'payload' => $message->properties->toArray(),
+                'metadata' => $message->properties->toArray(),
+            ], static::rules())->validate();
+        } catch (Throwable $ex) {
+            throw new NonRetriableMessageException();
+        }
 
         return $next($message);
     }
