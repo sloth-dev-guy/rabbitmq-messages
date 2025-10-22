@@ -32,7 +32,7 @@ class RetryMessage
     public function handle(): void
     {
         $this->listenedMessage->getConnection()->transaction(function (){
-            logger()->info('MessageListener::retryMessage', [
+            logger()->warning('MessageListener::retryMessage', [
                 'reason' => class_basename($this->ex),
                 'message' => $this->ex->getMessage(),
                 'properties' => $this->listenedMessage->properties->toArray(),

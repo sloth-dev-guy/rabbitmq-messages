@@ -6,6 +6,8 @@ services:
       - '.:/app'
     depends_on:
       - rabbitmq
+    entrypoint: ''
+    command: ['tail', '-f', '/dev/null']
 
   rabbitmq:
     image: rabbitmq:3-management-alpine

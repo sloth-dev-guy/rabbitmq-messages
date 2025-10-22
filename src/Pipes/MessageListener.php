@@ -73,7 +73,7 @@ class MessageListener
     protected function skipMessage(AMQPMessage $message, Throwable $ex): void
     {
         $reason = class_basename($ex);
-        logger()->info("message skipped $reason: {$ex->getMessage()}", $message->get_properties());
+        logger()->debug("message skipped $reason: {$ex->getMessage()}", $message->get_properties());
         $message->ack();
     }
 }
