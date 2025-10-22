@@ -33,7 +33,7 @@ class DeadLetterMessage
     public function handle(): void
     {
         $this->listenedMessage->getConnection()->transaction(function () {
-            logger()->info('MessageListener::deadLetterMessage', [
+            logger()->error('MessageListener::deadLetterMessage', [
                 'reason' => class_basename($this->ex),
                 'message' => $this->ex->getMessage(),
                 'properties' => $this->listenedMessage->properties->toArray(),

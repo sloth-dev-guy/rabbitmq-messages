@@ -3,11 +3,11 @@
 namespace SlothDevGuy\RabbitMQMessages\Pipes;
 
 use Illuminate\Support\Facades\Pipeline;
-use Illuminate\Validation\ValidationException;
 use PhpAmqpLib\Message\AMQPMessage;
 use SlothDevGuy\RabbitMQMessages\Builders\FromListenMessage;
 use SlothDevGuy\RabbitMQMessages\Builders\FromRabbitMQMessage;
 use SlothDevGuy\RabbitMQMessages\Exceptions\MessageRetriesExhaustedException;
+use SlothDevGuy\RabbitMQMessages\Interfaces\NonRetriableMessageThrowable;
 use SlothDevGuy\RabbitMQMessages\Interfaces\SkipListenMessageThrowable;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 use SlothDevGuy\RabbitMQMessages\Pipes\Resiliency\DeadLetterMessage;
@@ -51,10 +51,10 @@ class MessageListener
             $message->ack();
 
             return $listenedMessage;
-        } catch (SkipListenMessageThrowable|ValidationException $ex) {
+        }catch (SkipListenMessageThrowable $ex) {
             $this->skipMessage($message, $ex);
             throw $ex;
-        } catch (MessageRetriesExhaustedException $ex) {
+        } catch (MessageRetriesExhaustedException|NonRetriableMessageThrowable $ex) {
             $deadLetterMessage = new DeadLetterMessage($listenedMessage, $message, $connection, $ex);
             $deadLetterMessage->handle();
             throw $ex;
@@ -73,7 +73,7 @@ class MessageListener
     protected function skipMessage(AMQPMessage $message, Throwable $ex): void
     {
         $reason = class_basename($ex);
-        logger()->info("message skipped $reason: {$ex->getMessage()}", $message->get_properties());
+        logger()->debug("message skipped $reason: {$ex->getMessage()}", $message->get_properties());
         $message->ack();
     }
 }

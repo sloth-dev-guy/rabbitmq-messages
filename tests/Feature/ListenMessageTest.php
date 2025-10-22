@@ -3,8 +3,11 @@
 namespace SlothDevGuy\RabbitMQMessagesTests\Feature;
 
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Enumerable;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
+use SlothDevGuy\RabbitMQMessages\DispatchMessage;
 use SlothDevGuy\RabbitMQMessages\Models\Enums\ListenMessageStatusEnum;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 use SlothDevGuy\RabbitMQMessages\RabbitMQMessage;
@@ -193,6 +196,48 @@ class ListenMessageTest extends TestCase
         $this->assertDatabaseEmpty('listen_message');
         $this->assertQueueIsEmpty($configurations['queue']);
         $this->assertQueueIsNotEmpty(config('queue.connections.rabbitmq.dead_letter_queue'));
+    }
+
+    /**
+     * @return void
+     */
+    public function testDeadLetterInvalidMessages(): void
+    {
+        $message = 'foo';
+        Config::set("rabbitmq-messages.message_handlers.$message", MockMessageHandler::class);
+        Config::set('rabbitmq-messages.max_tries', 3);
+        Config::set('queue.connections.rabbitmq.retry_queue_delay', 1000);
+        $this->app->register(RabbitMQMessagesServiceProvider::class);
+        $configurations = $this->declareQueue();
+
+        $message = $this->mockInvalidMessage($message);
+        RabbitMQMessage::dispatchMessage($message)->fresh();
+
+        $sleep = ceil(config('queue.connections.rabbitmq.retry_queue_delay') / 1000);
+        $this->assertConsume($configurations['queue']);
+        sleep($sleep);
+
+        $this->assertDatabaseEmpty('listen_message');
+        $this->assertQueueIsEmpty($configurations['queue']);
+        $this->assertQueueIsNotEmpty(config('queue.connections.rabbitmq.dead_letter_queue'));
+    }
+
+    /**
+     * @param string $name
+     * @return DispatchMessage
+     */
+    protected function mockInvalidMessage(string $name): DispatchMessage
+    {
+        return new class($name) extends DispatchMessage {
+            public function __construct(string $name)
+            {
+                parent::__construct($name, collect());
+                $this->appID = '';
+                $this->buildProperties();
+                $this->buildPayload();
+                $this->buildMetadata();
+            }
+        };
     }
 
     public function testDeadLetterMessageInAllConnections(): void

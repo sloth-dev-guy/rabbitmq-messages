@@ -9,6 +9,7 @@ use Illuminate\Validation\ValidationException;
 use Mockery\MockInterface;
 use PhpAmqpLib\Message\AMQPMessage;
 use SlothDevGuy\RabbitMQMessages\Exceptions\MessageAlreadyRegisterException;
+use SlothDevGuy\RabbitMQMessages\Exceptions\NonRetriableMessageException;
 use SlothDevGuy\RabbitMQMessages\Models\Enums\ListenMessageStatusEnum;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 use SlothDevGuy\RabbitMQMessages\Pipes\MessageListener;
@@ -70,20 +71,6 @@ class MessageListenerTest extends TestCase
         $mock::$findReturn = new $mock;
         $this->app->bind(ListenMessageModel::class, fn() => $mock);
 
-        $registerMessage = new MessageListener();
-        $registerMessage->sendMessageThroughPipes($message, 'foo-queue', 'foo-connection');
-    }
-
-    /**
-     * @return void
-     * @throws Throwable
-     */
-    public function testInvalidMessageException(): void
-    {
-        $this->expectException(ValidationException::class);
-        $message = $this->mockRabbitMQMessage([], '');
-
-        $this->app->bind(ListenMessageModel::class, fn() => MockMessageHandler::mockListenMessageModel());
         $registerMessage = new MessageListener();
         $registerMessage->sendMessageThroughPipes($message, 'foo-queue', 'foo-connection');
     }
