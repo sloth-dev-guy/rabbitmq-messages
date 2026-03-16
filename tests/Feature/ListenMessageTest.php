@@ -8,6 +8,7 @@ use Illuminate\Support\Enumerable;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use SlothDevGuy\RabbitMQMessages\DispatchMessage;
+use SlothDevGuy\RabbitMQMessages\Models\DispatchMessageModel;
 use SlothDevGuy\RabbitMQMessages\Models\Enums\ListenMessageStatusEnum;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 use SlothDevGuy\RabbitMQMessages\RabbitMQMessage;
@@ -15,8 +16,10 @@ use SlothDevGuy\RabbitMQMessages\RabbitMQMessagesServiceProvider;
 use SlothDevGuy\RabbitMQMessages\RabbitMQQueue;
 use SlothDevGuy\RabbitMQMessages\Services\MessageResilient;
 use SlothDevGuy\RabbitMQMessagesTests\Feature\Mocks\MockFailedMessageHandler;
+use SlothDevGuy\RabbitMQMessagesTests\Feature\Mocks\MockInvalidMessageHandler;
 use SlothDevGuy\RabbitMQMessagesTests\Feature\Mocks\MockMessageHandler;
 use SlothDevGuy\RabbitMQMessagesTests\TestCase;
+use function Termwind\parse;
 
 class ListenMessageTest extends TestCase
 {
@@ -203,8 +206,8 @@ class ListenMessageTest extends TestCase
      */
     public function testDeadLetterInvalidMessages(): void
     {
-        $message = 'foo';
-        Config::set("rabbitmq-messages.message_handlers.$message", MockMessageHandler::class);
+        $message = 'some-invalid-message';
+        Config::set("rabbitmq-messages.message_handlers.$message", MockInvalidMessageHandler::class);
         Config::set('rabbitmq-messages.max_tries', 3);
         Config::set('queue.connections.rabbitmq.retry_queue_delay', 1000);
         $this->app->register(RabbitMQMessagesServiceProvider::class);
@@ -213,9 +216,7 @@ class ListenMessageTest extends TestCase
         $message = $this->mockInvalidMessage($message);
         RabbitMQMessage::dispatchMessage($message)->fresh();
 
-        $sleep = ceil(config('queue.connections.rabbitmq.retry_queue_delay') / 1000);
         $this->assertConsume($configurations['queue']);
-        sleep($sleep);
 
         $this->assertDatabaseEmpty('listen_message');
         $this->assertQueueIsEmpty($configurations['queue']);
@@ -228,16 +229,31 @@ class ListenMessageTest extends TestCase
      */
     protected function mockInvalidMessage(string $name): DispatchMessage
     {
-        return new class($name) extends DispatchMessage {
-            public function __construct(string $name)
+        return new DispatchMessage($name, collect());
+    }
+
+    /**
+     * @param string $connection
+     * @return DispatchMessageModel
+     */
+    protected function mockEmptyMessage(string $connection = 'rabbitmq'): DispatchMessageModel
+    {
+        $mock = new class extends DispatchMessageModel {
+            public function save(array $options = []): bool
             {
-                parent::__construct($name, collect());
-                $this->appID = '';
-                $this->buildProperties();
-                $this->buildPayload();
-                $this->buildMetadata();
+                return true;
             }
         };
+        $mock->properties = collect();
+        $mock->payload = collect();
+        $mock->metadata = collect([
+            'connection' => $connection,
+            'exchange' => config("queue.connections.$connection.options.queue.exchange"),
+            'exchange_type' => config("queue.connections.$connection.options.queue.exchange_type"),
+            'routing_key' => config("queue.connections.$connection.options.queue.exchange_routing_key"),
+        ]);
+
+        return $mock;
     }
 
     public function testDeadLetterMessageInAllConnections(): void
@@ -267,6 +283,22 @@ class ListenMessageTest extends TestCase
             $this->assertQueueIsEmpty($configurations['queue']);
             $this->assertQueueIsNotEmpty(config("queue.connections.$connection.dead_letter_queue"));
         }
+    }
+
+    public function testSkipInvalidMessage(): void
+    {
+        $this->app->register(RabbitMQMessagesServiceProvider::class);
+        $configurations = $this->declareQueue();
+        $connection = 'rabbitmq';
+
+        /** @var RabbitMQQueue $rabbitmq */
+        $rabbitmq = Queue::connection($connection);
+        $rabbitmq->dispatchMessage($this->mockEmptyMessage());
+        $this->assertConsume($configurations['queue']);
+
+        $this->assertDatabaseEmpty('listen_message');
+        $this->assertQueueIsEmpty($configurations['queue']);
+        $this->assertQueueIsEmpty(config('queue.connections.rabbitmq.dead_letter_queue'));
     }
 
     protected static function makeFakePayload(): array
