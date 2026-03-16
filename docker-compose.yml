@@ -1,6 +1,6 @@
 services:
   php.dev:
-    image: kytel0925/php:8.2-debian-apache-dev
+    image: kytel0925/php:8.4-debian-apache-dev
     restart: unless-stopped
     volumes:
       - '.:/app'

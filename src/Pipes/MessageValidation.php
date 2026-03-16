@@ -4,7 +4,7 @@ namespace SlothDevGuy\RabbitMQMessages\Pipes;
 
 use Closure;
 use Illuminate\Validation\ValidationException;
-use SlothDevGuy\RabbitMQMessages\Exceptions\NonRetriableMessageException;
+use SlothDevGuy\RabbitMQMessages\Exceptions\InvalidRabbitMQMessageException;
 use SlothDevGuy\RabbitMQMessages\Models\ListenMessageModel;
 use Throwable;
 
@@ -25,7 +25,7 @@ class MessageValidation
                 'metadata' => $message->properties->toArray(),
             ], static::rules())->validate();
         } catch (ValidationException $ex) {
-            throw new NonRetriableMessageException($ex->getMessage(), $ex->getCode(), $ex);
+            throw new InvalidRabbitMQMessageException($ex->getMessage(), $ex->getCode(), $ex);
         }
 
         return $next($message);

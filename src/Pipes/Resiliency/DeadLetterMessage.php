@@ -48,6 +48,7 @@ class DeadLetterMessage
                 $this->listenedMessage->save();
             }
             else{
+                $this->listenedMessage->id && $this->listenedMessage->delete();
                 RabbitMQMessage::deadLetterMessage($this->listenedMessage);
             }
 
