@@ -36,6 +36,8 @@ class ListenMessageTest extends TestCase
 
         $message = RabbitMQMessage::dispatchMessage($message, $payload)->fresh();
         $this->assertConsume($configurations['queue']);
+        //there is a way to redeclare this class VladimirYuldashev\LaravelQueueRabbitMQ\Console\WorkCommand in order to fix this protected $signature = 'rabbitmq:consume
+        //maybe a good places sed that modify the file before anyone reads-it?
 
         $this->assertDatabaseHas('listen_message', [
             'uuid' => $message->uuid,
