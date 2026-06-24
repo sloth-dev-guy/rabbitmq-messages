@@ -1,6 +1,6 @@
 services:
   php.dev:
-    image: kytel0925/php:8.4-debian-apache-dev
+    image: kytel0925/php:8.5-debian-frankenphp-dev
     restart: unless-stopped
     volumes:
       - '.:/app'
@@ -10,7 +10,7 @@ services:
     command: ['tail', '-f', '/dev/null']
 
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:4-management-alpine
     ports:
       - '${RABBITMQ_PORT:-5672}:5672'
       - '${RABBITMQ_MANAGEMENT_PORT:-15672}:15672'
